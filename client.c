@@ -6,20 +6,24 @@
 #include <time.h>
 #include <unistd.h>
 
+#define LEN 10000
 #define SORT_DEV "/dev/sort_test"
 
 int main()
 {
     int fd = open(SORT_DEV, O_RDWR);
     int t;
-    char buf[1000];
+    char buf[1];
     if (fd < 0) {
         perror("Failed to open character device");
         exit(1);
     }
     FILE *data = fopen("data.txt", "w");
-    t = read(fd, buf, 1);
-    fprintf(data, "sorting time is %d", t);
+    for(int i = 0; i < LEN; i++) {
+        lseek(fd, i, SEEK_SET);
+        t = read(fd, buf, 1);
+        fprintf(data, "%d %d\n", i + 1, t);
+    }
     close(fd);
     fclose(data);
     return 0;

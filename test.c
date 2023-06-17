@@ -20,25 +20,50 @@ static dev_t sort_dev = 0;
 static struct cdev *sort_cdev;
 static struct class *sort_class;
 static ktime_t kt;
-static ssize_t sort_read(struct file *filp,
+static ssize_t sort_read(struct file *file,
                          char *buf,
                          size_t size,
-                         loff_t *f_pos)
+                         loff_t *offset)
 {
     int *a = kmalloc(sizeof(int) * LEN, GFP_KERNEL);
     int r = 1;
-    for(int i = 0; i < LEN; i++) {
+    for(int i = 0; i < *offset; i++) {
         r = (r * 725861) % 6599;
         a[i] = r;
     }
     kt = ktime_get();
-    sort(a, LEN, sizeof(int), cmpint, NULL);
+    sort(a, (*offset) + 1, sizeof(int), cmpint, NULL);
     kt = ktime_sub(ktime_get(), kt);
-    return ktime_to_us(kt);
+    ktime_to_us(kt);
+    return kt;
+}
+
+static loff_t sort_lseek(struct file *file, loff_t offset, int orig)
+{
+    loff_t new_pos = 0;
+    switch (orig) {
+    case 0: /* SEEK_SET: */
+        new_pos = offset;
+        break;
+    case 1: /* SEEK_CUR: */
+        new_pos = file->f_pos + offset;
+        break;
+    case 2: /* SEEK_END: */
+        new_pos = LEN - offset;
+        break;
+    }
+
+    if (new_pos > LEN)
+        new_pos = LEN;  // max case
+    if (new_pos < 0)
+        new_pos = 0;        // min case
+    file->f_pos = new_pos;  // This is what we'll use now
+    return new_pos;
 }
 
 const struct file_operations sort_fops = {
-    .read = sort_read
+    .read = sort_read,
+    .llseek = sort_lseek
 };
 
 static int sort_init(void)
