@@ -4,6 +4,7 @@ KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 all:
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
+	gcc client.c -o client
 
 clean:
 	rm -rf *.o *.ko *.mod.* *.symvers *.order *.mod.cmd *.mod
@@ -15,12 +16,11 @@ load:
 unload:
 	sudo rmmod $(TARGET_MODULE) || true >/dev/null
 
-client_c:
-	gcc client.c -o client
+plot:
+	gnuplot plot.gp
 
-client_do:
+check: all
+	$(MAKE) unload
+	$(MAKE) load
 	sudo ./client
-
-client:
-	$(MAKE) client_c
-	$(MAKE) client_do
+	$(MAKE) unload
