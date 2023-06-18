@@ -1,5 +1,10 @@
-TARGET_MODULE := test
+TARGET_MODULE := sort_test
 obj-m :=$(TARGET_MODULE).o
+sort_test-objs := \
+	heap.o \
+	xoroshiro128plus.o \
+	test.o
+
 KDIR := /lib/modules/$(shell uname -r)/build
 PWD := $(shell pwd)
 all:

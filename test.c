@@ -1,14 +1,19 @@
 #include <linux/module.h>
 #include <linux/init.h>
-#include <linux/sort.h>
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
+
+#include "sort_impl.h"
 
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define DEV_NAME "sort_test"
 #define LEN 10000
+
+extern void seed(uint64_t, uint64_t);
+extern void jump(void);
+extern uint64_t next(void);
 
 static int cmpint(const void *a, const void *b)
 {
@@ -25,14 +30,14 @@ static ssize_t sort_read(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    int *a = kmalloc(sizeof(int) * LEN, GFP_KERNEL);
-    int r = 1;
+    int *arr;
+    arr = kmalloc_array(LEN, sizeof(*arr), GFP_KERNEL);
     for(int i = 0; i < *offset; i++) {
-        r = (r * 725861) % 6599;
-        a[i] = r;
+        uint64_t val = next();
+        arr[i] = val;
     }
     kt = ktime_get();
-    sort(a, (*offset) + 1, sizeof(int), cmpint, NULL);
+    sort_heap(arr, (*offset) + 1, sizeof(int), cmpint, NULL);
     kt = ktime_sub(ktime_get(), kt);
     ktime_to_us(kt);
     return kt;
@@ -70,7 +75,7 @@ static int sort_init(void)
 {
     int rc = 0;
 
-
+    seed(314159265, 1618033989);  // Initialize PRNG with pi and phi.
     // Let's register the device
     // This will dynamically allocate the major number
     rc = alloc_chrdev_region(&sort_dev, 0, 1, DEV_NAME);
