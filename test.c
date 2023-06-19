@@ -15,11 +15,16 @@ extern void seed(uint64_t, uint64_t);
 extern void jump(void);
 extern uint64_t next(void);
 
-static int cmpint(const void *a, const void *b)
+static int cmpint64(const void *a, const void *b)
 {
-    return *(int *) a - *(int *) b; 
+    uint64_t a_val = *(uint64_t *) a;
+    uint64_t b_val = *(uint64_t *) b;
+    if (a_val > b_val)
+        return 1;
+    if (a_val == b_val)
+        return 0;
+    return -1;
 }
-
 
 static dev_t sort_dev = 0;
 static struct cdev *sort_cdev;
@@ -30,16 +35,23 @@ static ssize_t sort_read(struct file *file,
                          size_t size,
                          loff_t *offset)
 {
-    int *arr;
+    uint64_t *arr;
     arr = kmalloc_array(LEN, sizeof(*arr), GFP_KERNEL);
-    for(int i = 0; i < *offset; i++) {
+    for (int i = 0; i < (*offset) + 1; i++) {
         uint64_t val = next();
         arr[i] = val;
     }
     kt = ktime_get();
-    sort_heap(arr, (*offset) + 1, sizeof(int), cmpint, NULL);
+    sort_heap(arr, (*offset) + 1, sizeof(*arr), cmpint64, NULL);
     kt = ktime_sub(ktime_get(), kt);
     ktime_to_us(kt);
+    for (int i = 0; i < (*offset); i++) {
+        if (arr[i] > arr[i + 1]) {
+            pr_err("%d test has failed in heapqsort\n", (*offset + 1));
+            break;
+        }
+    }
+    kfree(arr);
     return kt;
 }
 
