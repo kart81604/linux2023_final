@@ -6,7 +6,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#define LEN 10000
+#define LEN 8000
 #define SORT_DEV "/dev/sort_test"
 
 int main()

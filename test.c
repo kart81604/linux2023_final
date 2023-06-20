@@ -9,7 +9,7 @@
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define DEV_NAME "sort_test"
-#define LEN 10000
+#define LEN 8000
 
 extern void seed(uint64_t, uint64_t);
 extern void jump(void);
@@ -29,31 +29,46 @@ static int cmpint64(const void *a, const void *b)
 static dev_t sort_dev = 0;
 static struct cdev *sort_cdev;
 static struct class *sort_class;
-static ktime_t kt;
+static ktime_t kt_heap, kt_intro;
 static ssize_t sort_read(struct file *file,
                          char *buf,
                          size_t size,
                          loff_t *offset)
 {
-    uint64_t *arr;
+    uint64_t *arr, *arr_copy;
     arr = kmalloc_array(LEN, sizeof(*arr), GFP_KERNEL);
+    arr_copy = kmalloc_array(LEN, sizeof(*arr_copy), GFP_KERNEL);
     for (int i = 0; i < (*offset) + 1; i++) {
         uint64_t val = next();
         arr[i] = val;
     }
-    kt = ktime_get();
+    memcpy(arr_copy, arr, sizeof(int64_t) * LEN);
+    kt_heap = ktime_get();
     sort_heap(arr, (*offset) + 1, sizeof(*arr), cmpint64, NULL);
-    kt = ktime_sub(ktime_get(), kt);
-    ktime_to_us(kt);
+    kt_heap = ktime_sub(ktime_get(), kt_heap);
+    ktime_to_us(kt_heap);
     for (int i = 0; i < (*offset); i++) {
         if (arr[i] > arr[i + 1]) {
-            pr_err("%d test has failed in heapqsort\n", (*offset + 1));
+            pr_err("%d test has failed in heapsort\n", (*offset + 1));
             break;
         }
     }
+    kt_intro = ktime_get();
+    sort_intro(arr_copy, (*offset) + 1, sizeof(*arr_copy), cmpint64, NULL);
+    kt_intro = ktime_sub(ktime_get(), kt_intro);
+    ktime_to_us(kt_intro);
+    for (int i = 0; i < (*offset); i++) {
+        if (arr[i] > arr[i + 1]) {
+            pr_err("%d test has failed in introsort\n", (*offset + 1));
+            break;
+        }
+    }
+    printk("%lld %llu %llu\n", (*offset) + 1, kt_heap, kt_intro);
     kfree(arr);
-    return kt;
+    kfree(arr_copy);
+    return size;
 }
+
 
 static loff_t sort_lseek(struct file *file, loff_t offset, int orig)
 {

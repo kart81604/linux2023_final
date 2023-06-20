@@ -3,6 +3,7 @@ obj-m :=$(TARGET_MODULE).o
 sort_test-objs := \
 	heap.o \
 	xoroshiro128plus.o \
+	intro.o \
 	test.o
 
 KDIR := /lib/modules/$(shell uname -r)/build
