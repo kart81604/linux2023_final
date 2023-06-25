@@ -9,16 +9,18 @@
 MODULE_LICENSE("Dual BSD/GPL");
 
 #define DEV_NAME "sort_test"
-#define LEN 8000
+#define LEN 20000
 
 extern void seed(uint64_t, uint64_t);
 extern void jump(void);
 extern uint64_t next(void);
 
+int cmp_num = 0;
 static int cmpint64(const void *a, const void *b)
 {
     uint64_t a_val = *(uint64_t *) a;
     uint64_t b_val = *(uint64_t *) b;
+    cmp_num++;
     if (a_val > b_val)
         return 1;
     if (a_val == b_val)
@@ -43,6 +45,7 @@ static ssize_t sort_read(struct file *file,
         arr[i] = val;
     }
     memcpy(arr_copy, arr, sizeof(int64_t) * LEN);
+    cmp_num = 0;
     kt_heap = ktime_get();
     sort_heap(arr, (*offset) + 1, sizeof(*arr), cmpint64, NULL);
     kt_heap = ktime_sub(ktime_get(), kt_heap);
@@ -66,7 +69,7 @@ static ssize_t sort_read(struct file *file,
     printk("%lld %llu %llu\n", (*offset) + 1, kt_heap, kt_intro);
     kfree(arr);
     kfree(arr_copy);
-    return size;
+    return cmp_num;
 }
 
 
